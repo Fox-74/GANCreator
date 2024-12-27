@@ -1,0 +1,7 @@
+{
+    "noise_dim": 10,
+    "epochs": 1000,
+    "learning_rate": 0.0002,
+    "input_file": "data/input.csv",
+    "output_file": "data/output.csv"
+}
