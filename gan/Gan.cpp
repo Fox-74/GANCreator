@@ -1,7 +1,9 @@
 #include "Gan.h"
+#include "utils/Logger.h"
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+// Реализация генератора
 Generator::Generator(int input_size, int output_size) {
     network = torch::nn::Sequential(
         torch::nn::Linear(input_size, 128),
@@ -18,6 +20,7 @@ torch::Tensor Generator::forward(torch::Tensor x) {
     return network->forward(x);
 }
 
+// Реализация дискриминатора
 Discriminator::Discriminator(int input_size) {
     network = torch::nn::Sequential(
         torch::nn::Linear(input_size, 256),
@@ -34,16 +37,19 @@ torch::Tensor Discriminator::forward(torch::Tensor x) {
     return network->forward(x);
 }
 
+// Реализация GAN
 GAN::GAN(int noise_dim, int data_dim, int epochs, double lr)
     : noise_dim(noise_dim), data_dim(data_dim), epochs(epochs), lr(lr),
       generator(noise_dim, data_dim), discriminator(data_dim),
-      gen_optimizer(generator.parameters(), lr), disc_optimizer(discriminator.parameters(), lr) {}
+      gen_optimizer(generator.parameters(), lr), disc_optimizer(discriminator.parameters(), lr) {
+    Logger::init(); // Инициализация логгера
+}
 
 void GAN::train(const std::vector<std::vector<double>>& data) {
     auto real_data = torch::tensor(data).to(torch::kFloat32);
 
     for (int epoch = 0; epoch < epochs; ++epoch) {
-        // Train Discriminator
+        // Обучение дискриминатора
         auto noise = torch::randn({real_data.size(0), noise_dim});
         auto fake_data = generator.forward(noise);
         auto real_output = discriminator.forward(real_data);
@@ -54,7 +60,7 @@ void GAN::train(const std::vector<std::vector<double>>& data) {
         d_loss.backward();
         disc_optimizer.step();
 
-        // Train Generator
+        // Обучение генератора
         auto fake_output_gen = discriminator.forward(fake_data);
         auto g_loss = -torch::mean(torch::log(fake_output_gen));
         gen_optimizer.zero_grad();
@@ -90,5 +96,6 @@ void GAN::loadModel(const std::string& path) {
 }
 
 void GAN::logMetrics(int epoch, float d_loss, float g_loss) {
-    spdlog::info("Epoch [{}]: D Loss = {:.4f}, G Loss = {:.4f}", epoch, d_loss, g_loss);
+    auto logger = Logger::getLogger();
+    logger->info("Epoch [{}]: D Loss = {:.4f}, G Loss = {:.4f}", epoch, d_loss, g_loss);
 }
